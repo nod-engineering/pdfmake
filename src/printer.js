@@ -156,8 +156,8 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 		var pageHeight = calculatePageHeight(pages, docDefinition.pageMargins);
 		this.pdfKitDoc.options.size = [pageSize.width, pageHeight];
 	}
-
-	renderPages(pages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
+	const finalPages = pages.map(page => ({ ...page, items: hasSection(page.items) ? sortByKey(page.items, 'type') : page.items }));
+	renderPages(finalPages, this.fontProvider, this.pdfKitDoc, options.progressCallback);
 
 	if (options.autoPrint) {
 		var printActionRef = this.pdfKitDoc.ref({
@@ -170,6 +170,16 @@ PdfPrinter.prototype.createPdfKitDocument = function (docDefinition, options) {
 	}
 	return this.pdfKitDoc;
 };
+function hasSection(items) {
+	return items.some(item => !!item.section);
+}
+
+function sortByKey(array, key) {
+	return array.sort(function (a, b) {
+		var x = a[key]; var y = b[key];
+		return ((x > y) ? -1 : ((x < y) ? 1 : 0));
+	});
+}
 
 function setMetadata(docDefinition, pdfKitDoc) {
 	// PDF standard has these properties reserved: Title, Author, Subject, Keywords,

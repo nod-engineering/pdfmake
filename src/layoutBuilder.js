@@ -151,14 +151,9 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 	this.writer = new PageElementWriter(
 		new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
-	var _this = this;
-	this.writer.context().tracker.startTracking('pageAdded', function () {
-		_this.addBackground(background);
-	});
-
-	this.addBackground(background);
 	this.processNode(docStructure);
 	this.addHeadersAndFooters(header, footer);
+	this.addBackground(background);
 	if (watermark != null) {
 		this.addWatermark(watermark, fontProvider, defaultStyle);
 	}
@@ -172,17 +167,25 @@ LayoutBuilder.prototype.addBackground = function (background) {
 		return background;
 	};
 
-	var context = this.writer.context();
-	var pageSize = context.getCurrentPage().pageSize;
+	const pages = this.writer.context().pages;
+	const pageSize = this.writer.context().getCurrentPage().pageSize;
+	const context = this.writer.context();
+	for (let pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
+		context.page = pageIndex;
+		const currentPage = pages[pageIndex];
+		const pageSectionObj = currentPage && currentPage.items && currentPage.items.find(item => {
+			return !!item.section;
+		});
+		const pageSection = pageSectionObj && pageSectionObj.section || undefined;
+		let pageBackground = backgroundGetter(pageIndex + 1, pageSize, pageSection);
 
-	var pageBackground = backgroundGetter(context.page + 1, pageSize);
-
-	if (pageBackground) {
-		this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
-		pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
-		this.processNode(this.docMeasure.measureDocument(pageBackground));
-		this.writer.commitUnbreakableBlock(0, 0);
-		context.backgroundLength[context.page] += pageBackground.positions.length;
+		if (pageBackground) {
+			this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
+			pageBackground = this.docPreprocessor.preprocessDocument(pageBackground);
+			this.processNode(this.docMeasure.measureDocument(pageBackground));
+			this.writer.commitUnbreakableBlock(0, 0);
+			context.backgroundLength[context.page] += pageBackground.positions.length;
+		}
 	}
 };
 
@@ -197,8 +200,12 @@ LayoutBuilder.prototype.addDynamicRepeatable = function (nodeGetter, sizeFunctio
 
 	for (var pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
 		this.writer.context().page = pageIndex;
-
-		var node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
+		const currentPage = pages[pageIndex];
+		const pageSectionObj = currentPage && currentPage.items && currentPage.items.find(item => {
+			return !!item.section;
+		});
+		const pageSection = pageSectionObj && pageSectionObj.section || undefined;
+		var node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize, pageSection);
 
 		if (node) {
 			var sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
@@ -662,6 +669,9 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 // leafs (texts)
 LayoutBuilder.prototype.processLeaf = function (node) {
 	var line = this.buildNextLine(node);
+	if (node.section) {
+		line.section = node.section;
+	}
 	if (line && (node.tocItem || node.id)) {
 		line._node = node;
 	}
@@ -707,6 +717,12 @@ LayoutBuilder.prototype.processLeaf = function (node) {
 
 LayoutBuilder.prototype.processToc = function (node) {
 	if (node.toc.title) {
+		if (node && node.section) {
+			node.toc.title = {
+				...node.toc.title,
+				section: node.section
+			}
+		}
 		this.processNode(node.toc.title);
 	}
 	if (node.toc._table) {

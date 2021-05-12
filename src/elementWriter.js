@@ -41,7 +41,8 @@ ElementWriter.prototype.addLine = function (line, dontUpdateContextPosition, ind
 
 	addPageItem(page, {
 		type: 'line',
-		item: line
+		item: line,
+		section: line.section,
 	}, index);
 	this.tracker.emit('lineAdded', line);
 
