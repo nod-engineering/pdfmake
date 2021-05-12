@@ -90,7 +90,8 @@ class PdfPrinter {
 					}
 
 					const renderer = new Renderer(this.pdfKitDoc, options.progressCallback);
-					renderer.renderPages(pages);
+					const finalPages = pages.map(page => ({ ...page, items: hasSection(page.items) ? sortByKey(page.items, 'type') : page.items }));
+					renderer.renderPages(finalPages);
 
 					resolve(this.pdfKitDoc);
 				} catch (e) {
@@ -144,6 +145,17 @@ class PdfPrinter {
 			});
 		});
 	}
+}
+
+function hasSection(items) {
+	return items.some(item => !!item.section);
+}
+
+function sortByKey(array, key) {
+	return array.sort(function (a, b) {
+		const x = a[key]; var y = b[key];
+		return ((x > y) ? -1 : ((x < y) ? 1 : 0));
+	});
 }
 
 function setMetadata(docDefinition, pdfKitDoc) {

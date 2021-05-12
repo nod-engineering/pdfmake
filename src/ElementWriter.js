@@ -35,7 +35,8 @@ class ElementWriter extends EventEmitter {
 
 		addPageItem(page, {
 			type: 'line',
-			item: line
+			item: line,
+			section: line.section,
 		}, index);
 		this.emit('lineAdded', line);
 
