@@ -100,25 +100,36 @@ DocumentContext.prototype.completeColumnGroup = function (height) {
 
 	this.endingCell = null;
 	this.x = saved.x;
-
-	var y = saved.bottomMost.y;
 	if (height) {
-		if (saved.page === saved.bottomMost.page) {
-			if ((saved.y + height) > y) {
-				y = saved.y + height;
-			}
-		} else {
-			y += height;
-		}
+		this.y = saved.y + height;
+		this.page = saved.page;
+		this.height = height;
+		this.availableHeight = saved.availableHeight - height;
+	} else {
+		this.y = saved.bottomMost.y;
+		this.page = saved.bottomMost.page;
+		this.height = saved.bottomMost.y - saved.y;
+		this.availableHeight = saved.bottomMost.availableHeight;
 	}
 
-	this.y = y;
-	this.page = saved.bottomMost.page;
+	// var y = saved.bottomMost.y;
+	// if (height) {
+	// 	if (saved.page === saved.bottomMost.page) {
+	// 		if ((saved.y + height) > y) {
+	// 			y = saved.y + height;
+	// 		}
+	// 	} else {
+	// 		y += height;
+	// 	}
+	// }
+
+	// this.y = y;
+	// this.page = saved.bottomMost.page;
 	this.availableWidth = saved.availableWidth;
-	this.availableHeight = saved.bottomMost.availableHeight;
-	if (height) {
-		this.availableHeight -= (y - saved.bottomMost.y);
-	}
+	// this.availableHeight = saved.bottomMost.availableHeight;
+	// if (height) {
+	// 	this.availableHeight -= (y - saved.bottomMost.y);
+	// }
 	this.lastColumnWidth = saved.lastColumnWidth;
 };
 

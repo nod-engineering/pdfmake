@@ -55,6 +55,13 @@ PageElementWriter.prototype.addQr = function (qr, index) {
 PageElementWriter.prototype.addVector = function (vector, ignoreContextX, ignoreContextY, index) {
 	return this.writer.addVector(vector, ignoreContextX, ignoreContextY, index);
 };
+PageElementWriter.prototype.beginVerticalAlign = function(verticalAlign) {
+	return this.writer.beginVerticalAlign(verticalAlign);
+};
+
+PageElementWriter.prototype.endVerticalAlign = function(verticalAlign) {
+	return this.writer.endVerticalAlign(verticalAlign);
+};
 
 PageElementWriter.prototype.beginClip = function (width, height) {
 	return this.writer.beginClip(width, height);
