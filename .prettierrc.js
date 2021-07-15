@@ -1,0 +1,8 @@
+module.exports = {
+	tabWidth: 2,
+	singleQuote: true,
+	trailingComma: 'none',
+	arrowParens: 'avoid',
+	printWidth: 400,
+	jsxBracketSameLine: false
+};

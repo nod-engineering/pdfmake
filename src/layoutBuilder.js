@@ -59,9 +59,7 @@ LayoutBuilder.prototype.registerTableLayouts = function (tableLayouts) {
  * @return {Array} an array of pages
  */
 LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
-
 	function addPageBreaksIfNecessary(linearNodeList, pages) {
-
 		if (!isFunction(pageBreakBeforeFct)) {
 			return false;
 		}
@@ -72,17 +70,19 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 
 		linearNodeList.forEach(function (node) {
 			var nodeInfo = {};
-			[
-				'id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns',
-				'headlineLevel', 'style', 'pageBreak', 'pageOrientation',
-				'width', 'height'
-			].forEach(function (key) {
+			['id', 'text', 'ul', 'ol', 'table', 'image', 'qr', 'canvas', 'svg', 'columns', 'headlineLevel', 'style', 'pageBreak', 'pageOrientation', 'width', 'height'].forEach(function (key) {
 				if (node[key] !== undefined) {
 					nodeInfo[key] = node[key];
 				}
 			});
 			nodeInfo.startPosition = node.positions[0];
-			nodeInfo.pageNumbers = Array.from(new Set(node.positions.map(function (node) { return node.pageNumber; })));
+			nodeInfo.pageNumbers = Array.from(
+				new Set(
+					node.positions.map(function (node) {
+						return node.pageNumber;
+					})
+				)
+			);
 			nodeInfo.pages = pages.length;
 			nodeInfo.stack = isArray(node.stack);
 
@@ -127,7 +127,6 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 	this.docPreprocessor = new DocPreprocessor();
 	this.docMeasure = new DocMeasure(fontProvider, styleDictionary, defaultStyle, this.imageMeasure, this.svgMeasure, this.tableLayouts, images);
 
-
 	function resetXYs(result) {
 		result.linearNodeList.forEach(function (node) {
 			node.resetXY();
@@ -144,13 +143,11 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 };
 
 LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider, styleDictionary, defaultStyle, background, header, footer, images, watermark, pageBreakBeforeFct) {
-
 	this.linearNodeList = [];
 	docStructure = this.docPreprocessor.preprocessDocument(docStructure);
 	docStructure = this.docMeasure.measureDocument(docStructure);
 
-	this.writer = new PageElementWriter(
-		new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
+	this.writer = new PageElementWriter(new DocumentContext(this.pageSize, this.pageMargins), this.tracker);
 
 	this.processNode(docStructure);
 	this.addHeadersAndFooters(header, footer);
@@ -159,14 +156,18 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 		this.addWatermark(watermark, fontProvider, defaultStyle);
 	}
 
-	return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
+	return {
+		pages: this.writer.context().pages,
+		linearNodeList: this.linearNodeList
+	};
 };
 
-
 LayoutBuilder.prototype.addBackground = function (background) {
-	var backgroundGetter = isFunction(background) ? background : function () {
-		return background;
-	};
+	var backgroundGetter = isFunction(background)
+		? background
+		: function () {
+				return background;
+		  };
 
 	const pages = this.writer.context().pages;
 	const pageSize = this.writer.context().getCurrentPage().pageSize;
@@ -174,11 +175,23 @@ LayoutBuilder.prototype.addBackground = function (background) {
 	for (let pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
 		context.page = pageIndex;
 		const currentPage = pages[pageIndex];
-		const pageSectionObj = currentPage && currentPage.items && currentPage.items.find(item => {
-			return !!item.section;
-		});
-		const pageSection = pageSectionObj && pageSectionObj.section || undefined;
-		let pageBackground = backgroundGetter(pageIndex + 1, pageSize, pageSection);
+
+		const pageSectionObj =
+			currentPage &&
+			currentPage.items &&
+			currentPage.items.find(item => {
+				return !!item.section;
+			});
+
+		const pageSection = (pageSectionObj && pageSectionObj.section) || undefined;
+		const meta =
+			(pageSectionObj && {
+				coverPhoto: pageSectionObj.item.coverPhoto,
+				sectionPhoto: pageSectionObj.item.sectionPhoto
+			}) ||
+			{};
+
+		let pageBackground = backgroundGetter(pageIndex + 1, pageSize, pageSection, meta);
 
 		if (pageBackground) {
 			this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
@@ -202,10 +215,13 @@ LayoutBuilder.prototype.addDynamicRepeatable = function (nodeGetter, sizeFunctio
 	for (var pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
 		this.writer.context().page = pageIndex;
 		const currentPage = pages[pageIndex];
-		const pageSectionObj = currentPage && currentPage.items && currentPage.items.find(item => {
-			return !!item.section;
-		});
-		const pageSection = pageSectionObj && pageSectionObj.section || undefined;
+		const pageSectionObj =
+			currentPage &&
+			currentPage.items &&
+			currentPage.items.find(item => {
+				return !!item.section;
+			});
+		const pageSection = (pageSectionObj && pageSectionObj.section) || undefined;
 		var node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize, pageSection);
 
 		if (node) {
@@ -252,10 +268,11 @@ LayoutBuilder.prototype.addHeadersAndFooters = function (header, footer) {
 
 LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaultStyle) {
 	if (isString(watermark)) {
-		watermark = { 'text': watermark };
+		watermark = { text: watermark };
 	}
 
-	if (!watermark.text) { // empty watermark text
+	if (!watermark.text) {
+		// empty watermark text
 		return;
 	}
 
@@ -268,7 +285,7 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 	watermark.angle = !isUndefined(watermark.angle) && !isNull(watermark.angle) ? watermark.angle : null;
 
 	if (watermark.angle === null) {
-		watermark.angle = Math.atan2(this.pageSize.height, this.pageSize.width) * -180 / Math.PI;
+		watermark.angle = (Math.atan2(this.pageSize.height, this.pageSize.width) * -180) / Math.PI;
 	}
 
 	if (watermark.fontSize === 'auto') {
@@ -293,7 +310,11 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 
 	function getWatermarkSize(watermark, fontProvider) {
 		var textTools = new TextTools(fontProvider);
-		var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
+		var styleContextStack = new StyleContextStack(null, {
+			font: watermark.font,
+			bold: watermark.bold,
+			italics: watermark.italics
+		});
 
 		styleContextStack.push({
 			fontSize: watermark.fontSize
@@ -307,7 +328,11 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 
 	function getWatermarkFontSize(pageSize, watermark, fontProvider) {
 		var textTools = new TextTools(fontProvider);
-		var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
+		var styleContextStack = new StyleContextStack(null, {
+			font: watermark.font,
+			bold: watermark.bold,
+			italics: watermark.italics
+		});
 		var rotatedSize;
 
 		/**
@@ -345,12 +370,18 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 };
 
 function decorateNode(node) {
-	var x = node.x, y = node.y;
+	var x = node.x,
+		y = node.y;
 	node.positions = [];
 
 	if (isArray(node.canvas)) {
 		node.canvas.forEach(function (vector) {
-			var x = vector.x, y = vector.y, x1 = vector.x1, y1 = vector.y1, x2 = vector.x2, y2 = vector.y2;
+			var x = vector.x,
+				y = vector.y,
+				x1 = vector.x1,
+				y1 = vector.y1,
+				x2 = vector.x2,
+				y2 = vector.y2;
 			vector.resetXY = function () {
 				vector.x = x;
 				vector.y = y;
@@ -435,8 +466,11 @@ LayoutBuilder.prototype.processNode = function (node) {
 		}
 
 		if (node.verticalAlign) {
-			self.verticalAlignItemStack.push({ begin: verticalAlignBegin, end: self.writer.endVerticalAlign(node.verticalAlign) });
-		  }
+			self.verticalAlignItemStack.push({
+				begin: verticalAlignBegin,
+				end: self.writer.endVerticalAlign(node.verticalAlign)
+			});
+		}
 	});
 	node._height = self.writer.context().getCurrentPosition().top - prevTop;
 	function applyMargins(callback) {
@@ -509,7 +543,6 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 	var result = this.processRow(columns, columns, gaps);
 	addAll(columnNode.positions, result.positions);
 
-
 	function gapArray(gap) {
 		if (!gap) {
 			return null;
@@ -528,7 +561,8 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 
 LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, height) {
 	var self = this;
-	var pageBreaks = [], positions = [];
+	var pageBreaks = [],
+		positions = [];
 
 	this.tracker.auto('pageChanged', storePageBreakData, function () {
 		widths = widths || columns;
@@ -551,18 +585,18 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 			if (!column._span) {
 				if (height) {
 					var lastClipItem = self.writer.beginClip(width, height);
-				  }
+				}
 				self.processNode(column);
 				verticalAlignCols[colI] = self.verticalAlignItemStack.length - 1;
 				addAll(positions, column.positions);
 				if (height) {
 					if (column._height > height) {
-					  self.writer.endClip();
+						self.writer.endClip();
 					} else {
-					  // optimize by removing unnecessary clipping; this is ugly
-					  lastClipItem.type = '';
+						// optimize by removing unnecessary clipping; this is ugly
+						lastClipItem.type = '';
 					}
-				  }
+				}
 			} else if (column._columnEndingContext) {
 				// row-span ending
 				self.writer.context().markEnding(column);
@@ -571,13 +605,13 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 
 		self.writer.context().completeColumnGroup(height);
 		var rowHeight = self.writer.context().height;
-		for(var i = 0, l = columns.length; i < l; i++) {
-		  var column = columns[i];
-		  if (!column._span && column.verticalAlign) {
-			var item = self.verticalAlignItemStack[verticalAlignCols[i]].begin.item;
-			item.viewHeight = rowHeight;
-			item.nodeHeight = column._height;
-		  }
+		for (var i = 0, l = columns.length; i < l; i++) {
+			var column = columns[i];
+			if (!column._span && column.verticalAlign) {
+				var item = self.verticalAlignItemStack[verticalAlignCols[i]].begin.item;
+				item.viewHeight = rowHeight;
+				item.nodeHeight = column._height;
+			}
 		}
 	});
 
@@ -698,13 +732,23 @@ LayoutBuilder.prototype.processTable = function (tableNode) {
 // leafs (texts)
 LayoutBuilder.prototype.processLeaf = function (node) {
 	var line = this.buildNextLine(node);
+
 	if (node.section) {
 		line.section = node.section;
 	}
+
+	if (node.coverPhoto) {
+		line.coverPhoto = node.coverPhoto;
+	}
+
+	if (node.sectionPhoto) {
+		line.sectionPhoto = node.sectionPhoto;
+	}
+
 	if (line && (node.tocItem || node.id)) {
 		line._node = node;
 	}
-	var currentHeight = (line) ? line.getHeight() : 0;
+	var currentHeight = line ? line.getHeight() : 0;
 	var maxHeight = node.maxHeight || -1;
 
 	if (line) {
@@ -750,7 +794,7 @@ LayoutBuilder.prototype.processToc = function (node) {
 			node.toc.title = {
 				...node.toc.title,
 				section: node.section
-			}
+			};
 		}
 		this.processNode(node.toc.title);
 	}
@@ -760,7 +804,6 @@ LayoutBuilder.prototype.processToc = function (node) {
 };
 
 LayoutBuilder.prototype.buildNextLine = function (textNode) {
-
 	function cloneInline(inline) {
 		var newInline = inline.constructor();
 		for (var key in inline) {
@@ -777,8 +820,7 @@ LayoutBuilder.prototype.buildNextLine = function (textNode) {
 	var textTools = new TextTools(null);
 
 	var isForceContinue = false;
-	while (textNode._inlines && textNode._inlines.length > 0 &&
-		(line.hasEnoughSpaceForInline(textNode._inlines[0], textNode._inlines.slice(1)) || isForceContinue)) {
+	while (textNode._inlines && textNode._inlines.length > 0 && (line.hasEnoughSpaceForInline(textNode._inlines[0], textNode._inlines.slice(1)) || isForceContinue)) {
 		var isHardWrap = false;
 		var inline = textNode._inlines.shift();
 		isForceContinue = false;
