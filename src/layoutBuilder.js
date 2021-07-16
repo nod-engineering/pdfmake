@@ -186,12 +186,13 @@ LayoutBuilder.prototype.addBackground = function (background) {
 		const pageSection = (pageSectionObj && pageSectionObj.section) || undefined;
 		const meta =
 			(pageSectionObj && {
+				section: pageSection,
 				coverPhoto: pageSectionObj.item.coverPhoto,
 				sectionPhoto: pageSectionObj.item.sectionPhoto
 			}) ||
 			{};
 
-		let pageBackground = backgroundGetter(pageIndex + 1, pageSize, pageSection, meta);
+		let pageBackground = backgroundGetter(pageIndex + 1, pageSize, meta);
 
 		if (pageBackground) {
 			this.writer.beginUnbreakableBlock(pageSize.width, pageSize.height);
